@@ -8,6 +8,16 @@ android {
     compileSdk = 34
 
     defaultConfig {
+        buildConfigField(
+            "String",
+            "SERVER_IP",
+            "\"${project.findProperty("SERVER_IP")}\""
+        )
+        buildConfigField(
+            "String",
+            "PORT",
+            "\"${project.findProperty("PORT")}\""
+        )
         applicationId = "com.example.phones4behaviour"
         minSdk = 24
         targetSdk = 34
@@ -38,6 +48,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -50,7 +61,6 @@ android {
 }
 
 dependencies {
-
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -59,6 +69,8 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging.interceptor)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -67,3 +79,4 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+
