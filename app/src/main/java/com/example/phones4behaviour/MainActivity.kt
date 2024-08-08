@@ -1,92 +1,112 @@
 package com.example.phones4behaviour
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Button
-import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.phones4behaviour.ui.theme.Phones4BehaviourTheme
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import org.json.JSONObject
-import java.text.SimpleDateFormat
-import java.util.*
+import coil.compose.rememberAsyncImagePainter
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import java.io.IOException
+
+data class FileInfo(
+    val filename: String,
+    val filepath: String
+)
+
+var serverIp = BuildConfig.SERVER_IP
 
 class MainActivity : ComponentActivity() {
+    private val client = OkHttpClient()
+    private val gson = Gson()
+
+    private var imageUrl by mutableStateOf("")
+//    private var imageUrl = "http://$serverIp:5000/display/test5.jpg"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        var serverIp = BuildConfig.SERVER_IP
-        var port = BuildConfig.PORT
+        fetchFiles()
 
         setContent {
-            Phones4BehaviourTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Column(modifier = Modifier.padding(innerPadding)) {
-                        Placeholder(text = "Phones4Behaviour")
-                        ButtonWithTimestamp(serverIp, port)
+            MaterialTheme {
+                Surface(modifier = Modifier.fillMaxSize()) {
+                    if (imageUrl.isNotEmpty()) {
+                        ShowImage(imageUrl)
+                    } else {
+                        ShowText()
                     }
                 }
             }
         }
     }
+
+    private fun fetchFiles() {
+        val request = Request.Builder()
+            .url("http://$serverIp:5000/display")
+            .build()
+
+        client.newCall(request).enqueue(object : okhttp3.Callback {
+            override fun onFailure(call: okhttp3.Call, e: IOException) {
+                e.printStackTrace()
+                Log.e("MainActivity", "Network request failed: ${e.message}")
+            }
+
+            override fun onResponse(call: okhttp3.Call, response: Response) {
+                if (response.isSuccessful) {
+                    response.body?.let { responseBody ->
+                        val fileListType = object : TypeToken<List<FileInfo>>() {}.type
+                        val files: List<FileInfo> = gson.fromJson(responseBody.string(), fileListType)
+
+                        Log.d("MainActivity", "Files received: $files")
+
+                        if (files.isNotEmpty()) {
+                            val firstFileUrl = "http://$serverIp:5000/display/" + files[0].filename
+                            Log.d("MainActivity", "First file URL: $firstFileUrl")
+
+                            runOnUiThread {
+                                imageUrl = firstFileUrl
+                            }
+                        } else {
+                            Log.d("MainActivity", "No files received")
+                        }
+                    }
+                } else {
+                    Log.e("MainActivity", "Response not successful: ${response.code}")
+                }
+            }
+        })
+    }
+}
+
+
+@Composable
+fun ShowImage(imageUrl: String) {
+    Image(
+        painter = rememberAsyncImagePainter(model = imageUrl),
+        contentDescription = "Displayed Image",
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @Composable
-fun Placeholder(text: String, modifier: Modifier = Modifier) {
-    Surface(color = Color.White) {
-        Text(
-            text = text,
-            modifier = modifier
-        )
-    }
+fun ShowText() {
+    Text(text = "Select file to display")
 }
 
-@Composable
-fun ButtonWithTimestamp(serverIp: String, port: String) {
-    val coroutineScope = rememberCoroutineScope()
-    Button(onClick = {
-        val timestamp = getCurrentTimestamp()
-        sendTimestampToServer(coroutineScope, timestamp, serverIp, port)
-    }) {
-        Text("press")
-    }
-}
 
-fun getCurrentTimestamp(): String {
-    val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-    println(sdf)
-    return sdf.format(Date())
-}
 
-fun sendTimestampToServer(coroutineScope: CoroutineScope, timestamp: String, serverIp: String, port: String) {
-    coroutineScope.launch(Dispatchers.IO) {
-        val json = JSONObject().put("timestamp", timestamp).toString()
-        val response = NetworkClient.post("http://$serverIp:$port/times", json)
-        withContext(Dispatchers.Main) {
-        }
-    }
-}
 
-@Preview(showBackground = true)
-@Composable
-fun setPlaceholder() {
-    Phones4BehaviourTheme {
-        Column {
-            Placeholder("Phones4Behaviour")
-            ButtonWithTimestamp(serverIp = "127.0.0.1", port = "5000")
-        }
-    }
-}
