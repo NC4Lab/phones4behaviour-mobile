@@ -82,5 +82,6 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.google.code.gson:gson:2.11.0")
+    implementation("io.socket:socket.io-client:2.0.1")
 }
 

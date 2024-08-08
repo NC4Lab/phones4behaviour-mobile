@@ -21,6 +21,9 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
 import java.io.IOException
+import io.socket.client.IO
+import io.socket.client.Socket
+import okhttp3.logging.HttpLoggingInterceptor
 
 data class FileInfo(
     val filename: String,
@@ -30,7 +33,9 @@ data class FileInfo(
 var serverIp = BuildConfig.SERVER_IP
 
 class MainActivity : ComponentActivity() {
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder()
+        .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
+        .build()
     private val gson = Gson()
 
     private var imageUrl by mutableStateOf("")
@@ -38,8 +43,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
         fetchFiles()
+        setupSocket()
 
         setContent {
             MaterialTheme {
@@ -89,6 +94,23 @@ class MainActivity : ComponentActivity() {
                 }
             }
         })
+    }
+
+    private fun setupSocket() {
+        val options = IO.Options.builder().setTransports(arrayOf(io.socket.engineio.client.transports.WebSocket.NAME)).build()
+        val socket: Socket = IO.socket("http://$serverIp:5000", options)
+
+        socket.on(Socket.EVENT_CONNECT) {
+            Log.d("Socket", "Socket connected")
+        }.on("new_file") {
+            runOnUiThread {
+                fetchFiles()
+            }
+        }.on(Socket.EVENT_DISCONNECT) {
+            Log.d("Socket", "Socket disconnected")
+        }
+
+        socket.connect()
     }
 }
 
