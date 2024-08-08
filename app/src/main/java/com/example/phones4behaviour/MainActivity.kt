@@ -1,5 +1,6 @@
 package com.example.phones4behaviour
 
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -27,7 +28,8 @@ import okhttp3.logging.HttpLoggingInterceptor
 
 data class FileInfo(
     val filename: String,
-    val filepath: String
+    val filepath: String,
+    val filetype: String
 )
 
 var serverIp = BuildConfig.SERVER_IP
@@ -40,22 +42,27 @@ class MainActivity : ComponentActivity() {
 
     private var imageUrl by mutableStateOf("")
 //    private var imageUrl = "http://$serverIp:5000/display/test5.jpg"
+    private var audioUrl by mutableStateOf("")
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         fetchFiles()
         setupSocket()
 
-        setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    if (imageUrl.isNotEmpty()) {
-                        ShowImage(imageUrl)
-                    } else {
-                        ShowText()
+        try {
+            setContent {
+                MaterialTheme {
+                    Surface(modifier = Modifier.fillMaxSize()) {
+                        when {
+                            imageUrl.isNotEmpty() -> ShowImage(imageUrl)
+                            else -> ShowText()
+                        }
                     }
                 }
+
             }
+        } catch (e: Exception) {
+                Log.e("MainActivity", "Error setting content: ${e.message}")
         }
     }
 
@@ -79,11 +86,18 @@ class MainActivity : ComponentActivity() {
                         Log.d("MainActivity", "Files received: $files")
 
                         if (files.isNotEmpty()) {
-                            val firstFileUrl = "http://$serverIp:5000/display/" + files[0].filename
+                            val firstFile = files[0]
+                            val firstFileUrl = "http://$serverIp:5000/display/${firstFile.filename}"
                             Log.d("MainActivity", "First file URL: $firstFileUrl")
+                            Log.d("MainActivity", "File type: ${firstFile.filetype}")
 
                             runOnUiThread {
-                                imageUrl = firstFileUrl
+                                if (firstFile.filetype.startsWith("audio/")) {
+                                    audioUrl = firstFileUrl
+                                    playAudio(audioUrl)
+                                } else {
+                                    imageUrl = firstFileUrl
+                                }
                             }
                         } else {
                             Log.d("MainActivity", "No files received")
@@ -94,6 +108,26 @@ class MainActivity : ComponentActivity() {
                 }
             }
         })
+    }
+
+    private var mediaPlayer: MediaPlayer? = null
+
+    private fun playAudio(url: String) {
+        try {
+            mediaPlayer?.release()
+            mediaPlayer = MediaPlayer().apply {
+                setDataSource(url)
+                prepareAsync()
+                setOnPreparedListener { start() }
+                setOnCompletionListener { release() }
+                setOnErrorListener { _, what, extra ->
+                    Log.e("MediaPlayer", "Error occurred: what=$what, extra=$extra")
+                    true
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error playing audio: ${e.message}")
+        }
     }
 
     private fun setupSocket() {
