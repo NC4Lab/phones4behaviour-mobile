@@ -25,11 +25,19 @@ import java.io.IOException
 import io.socket.client.IO
 import io.socket.client.Socket
 import okhttp3.logging.HttpLoggingInterceptor
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import okhttp3.RequestBody
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
 
 data class FileInfo(
-    val filename: String,
-    val filepath: String,
-    val filetype: String
+    val file_name: String,
+    val file_path: String,
+    val file_type: String
 )
 
 var serverIp = BuildConfig.SERVER_IP
@@ -52,7 +60,19 @@ class MainActivity : ComponentActivity() {
         try {
             setContent {
                 MaterialTheme {
-                    Surface(modifier = Modifier.fillMaxSize()) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = { offset ->
+                                        val description = "Screen touched at x: ${offset.x}, y: ${offset.y}"
+                                        val timestamp = getCurrentTimestamp()
+                                        Log.d("TouchEvent", "$description at $timestamp")
+                                        postLog(description, timestamp)
+                                    }
+                                )
+                            }) {
                         when {
                             imageUrl.isNotEmpty() -> ShowImage(imageUrl)
                             else -> ShowText()
@@ -62,13 +82,48 @@ class MainActivity : ComponentActivity() {
 
             }
         } catch (e: Exception) {
-                Log.e("MainActivity", "Error setting content: ${e.message}")
+            Log.e("MainActivity", "Error setting content: ${e.message}")
         }
+    }
+
+    private fun getCurrentTimestamp(): String {
+        val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+        return dateFormat.format(Date())
+    }
+
+    private fun postLog(description: String, timestamp: String) {
+        val json = """
+            {
+                "tag": "Touch Event",
+                "desc": "$description",
+                "time": "$timestamp"
+            }
+        """.trimIndent()
+
+        val body = RequestBody.create("application/json; charset=utf-8".toMediaType(), json)
+        val request = Request.Builder()
+            .url("http://$serverIp:5000/logs")
+            .post(body)
+            .build()
+
+        client.newCall(request).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.e("MainActivity", "Failed to post log: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                if (response.isSuccessful) {
+                    Log.d("MainActivity", "Log posted successfully")
+                } else {
+                    Log.e("MainActivity", "Failed to post log, response code: ${response.code}")
+                }
+            }
+        })
     }
 
     private fun fetchFiles() {
         val request = Request.Builder()
-            .url("http://$serverIp:5000/display")
+            .url("http://$serverIp:5000/uploads/display")
             .build()
 
         client.newCall(request).enqueue(object : okhttp3.Callback {
@@ -87,12 +142,12 @@ class MainActivity : ComponentActivity() {
 
                         if (files.isNotEmpty()) {
                             val firstFile = files[0]
-                            val firstFileUrl = "http://$serverIp:5000/display/${firstFile.filename}"
+                            val firstFileUrl = "http://$serverIp:5000${firstFile.file_path}"
                             Log.d("MainActivity", "First file URL: $firstFileUrl")
-                            Log.d("MainActivity", "File type: ${firstFile.filetype}")
+                            Log.d("MainActivity", "File type: ${firstFile.file_type}")
 
                             runOnUiThread {
-                                if (firstFile.filetype.startsWith("audio/")) {
+                                if (firstFile.file_type.startsWith("audio/")) {
                                     audioUrl = firstFileUrl
                                     playAudio(audioUrl)
                                 } else {
