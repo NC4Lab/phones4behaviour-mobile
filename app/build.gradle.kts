@@ -80,8 +80,12 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("com.google.code.gson:gson:2.11.0")
-    implementation("io.socket:socket.io-client:2.0.1")
+    implementation(libs.coil.compose)
+    implementation(libs.gson)
+    implementation(libs.socket.io.client)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.video)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
 }
 

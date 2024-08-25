@@ -1,6 +1,8 @@
 package com.example.phones4behaviour
 
+import android.content.ContentValues
 import android.os.Bundle
+import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -20,6 +22,18 @@ import androidx.compose.ui.input.pointer.pointerInput
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import android.view.ViewGroup
+import androidx.camera.core.*
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.video.VideoCapture
+import androidx.camera.video.VideoCapture.Builder
+import androidx.camera.view.PreviewView
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.Preview
+import androidx.camera.video.MediaStoreOutputOptions
+import androidx.camera.video.Recorder
 
 data class FileInfo(
     val file_name: String,
@@ -33,23 +47,23 @@ class MainActivity : ComponentActivity() {
     private var imageUrl by mutableStateOf("")
     private var audioUrl by mutableStateOf("")
 
+//    private lateinit var previewView: PreviewView
+//    private lateinit var videoCapture: VideoCapture
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         fetchFiles(serverIp) { files ->
             if (files.isNotEmpty()) {
-                val firstFile = files[0]
-                val firstFileUrl = "http://$serverIp:5000${firstFile.file_path}"
-                Log.d("MainActivity", "First file URL: $firstFileUrl")
-                Log.d("MainActivity", "File type: ${firstFile.file_type}")
-
-                runOnUiThread {
-                    if (firstFile.file_type.startsWith("audio/")) {
-                        audioUrl = firstFileUrl
-                        playAudio(audioUrl)
-                    } else {
-                        imageUrl = firstFileUrl
+                if (files.isNotEmpty()) {
+                    for (file in files) {
+                        if (file.file_type.startsWith("audio/")) {
+                            audioUrl = "http://$serverIp:5000${file.file_path}"
+                        } else if (file.file_type.startsWith("image/")) {
+                            imageUrl = "http://$serverIp:5000${file.file_path}"
+                        }
                     }
                 }
+
             } else {
                 Log.d("MainActivity", "No files received")
             }
@@ -57,17 +71,11 @@ class MainActivity : ComponentActivity() {
         setupSocket(serverIp) {
             fetchFiles(serverIp) { files ->
                 if (files.isNotEmpty()) {
-                    val firstFile = files[0]
-                    val firstFileUrl = "http://$serverIp:5000${firstFile.file_path}"
-                    Log.d("MainActivity", "First file URL: $firstFileUrl")
-                    Log.d("MainActivity", "File type: ${firstFile.file_type}")
-
-                    runOnUiThread {
-                        if (firstFile.file_type.startsWith("audio/")) {
-                            audioUrl = firstFileUrl
-                            playAudio(audioUrl)
-                        } else {
-                            imageUrl = firstFileUrl
+                    for (file in files) {
+                        if (file.file_type.startsWith("audio/")) {
+                            audioUrl = "http://$serverIp:5000${file.file_path}"
+                        } else if (file.file_type.startsWith("image/")) {
+                            imageUrl = "http://$serverIp:5000${file.file_path}"
                         }
                     }
                 } else {
@@ -75,6 +83,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+//        startCamera()
 
         try {
             setContent {
@@ -91,11 +100,13 @@ class MainActivity : ComponentActivity() {
                                         postLog(description, timestamp)
                                     }
                                 )
-                            }) {
-                        when {
-                            imageUrl.isNotEmpty() -> ShowImage(imageUrl)
-                            else -> ShowText()
-                        }
+                            }
+                    ) {
+                        DisplayContent(imageUrl, audioUrl)
+//                        CameraPreview { view ->
+//                            previewView = view
+//                            startCamera()
+//                        }
                     }
                 }
 
@@ -105,13 +116,60 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+//    private fun startCamera() {
+//        val streamName = "stream-recording-" +
+//                SimpleDateFormat("yyyy/MM/dd_HH:mm:ss", Locale.getDefault())
+//                    .format(System.currentTimeMillis()) + ".mp4"
+//        val contentValues = ContentValues().apply {
+//            put(MediaStore.Video.Media.DISPLAY_NAME, streamName)
+//        }
+//
+//        val mediaStoreOutput = MediaStoreOutputOptions.Builder(this.contentResolver,
+//            MediaStore.Video.Media.EXTERNAL_CONTENT_URI)
+//            .setContentValues(contentValues)
+//            .build()
+//
+//        val recording = videoCapture.output
+//            .prepareRecording(context, mediaStoreOutput)
+//            .withAudioEnabled()
+//            .start(ContextCompat.getMainExecutor(this), captureListener)
+//
+//        val cameraProviderFuture = ProcessCameraProvider.getInstance(this)
+//        cameraProviderFuture.addListener({
+//            val cameraProvider: ProcessCameraProvider = cameraProviderFuture.get()
+//            val recorder = Recorder.Builder().build()
+//            val preview = Preview.Builder().build()
+//            val videoCapture = VideoCapture.Builder(recorder).build()
+//
+//            val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+//
+//            cameraProvider.unbindAll()
+//            cameraProvider.bindToLifecycle(this, cameraSelector, preview, videoCapture)
+//        }, ContextCompat.getMainExecutor(this))
+//    }
+
+
     private fun getCurrentTimestamp(): String {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
         return dateFormat.format(Date())
     }
+    
 
 }
 
+@Composable
+fun DisplayContent(imageUrl: String, audioUrl: String) {
+    if (imageUrl.isNotEmpty() && audioUrl.isNotEmpty()) {
+        ShowImage(imageUrl)
+        playAudio(audioUrl)
+    } else if (imageUrl.isNotEmpty()) {
+        ShowImage(imageUrl)
+    } else if (audioUrl.isNotEmpty()) {
+        playAudio(audioUrl)
+    } else {
+        ShowText()
+    }
+}
 
 @Composable
 fun ShowImage(imageUrl: String) {
@@ -125,6 +183,25 @@ fun ShowImage(imageUrl: String) {
 @Composable
 fun ShowText() {
     Text(text = "Select file to display")
+}
+
+@Composable
+fun CameraPreview(onPreviewViewCreated: (PreviewView) -> Unit) {
+    AndroidView(
+        factory = { context ->
+            PreviewView(context).apply {
+                this.scaleType = PreviewView.ScaleType.FILL_CENTER
+                layoutParams = ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT
+                )
+            }
+        },
+        modifier = Modifier.fillMaxSize(),
+        update = { view ->
+            onPreviewViewCreated(view)
+        }
+    )
 }
 
 
