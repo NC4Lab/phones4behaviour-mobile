@@ -19,6 +19,21 @@ android {
             "PORT",
             "\"${project.findProperty("PORT")}\""
         )
+        buildConfigField(
+            "String",
+            "STREAM_API_KEY",
+            "\"${project.findProperty("STREAM_API_KEY")}\""
+        )
+        buildConfigField(
+            "String",
+            "STREAM_VIEWER_TOKEN",
+            "\"${project.findProperty("STREAM_VIEWER_TOKEN")}\""
+        )
+        buildConfigField(
+            "String",
+            "STREAM_LIVESTREAM_ID",
+            "\"${project.findProperty("STREAM_LIVESTREAM_ID")}\""
+        )
         applicationId = "com.example.phones4behaviour"
         minSdk = 24
         targetSdk = 34
@@ -50,6 +65,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        viewBinding = true
     }
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
@@ -83,9 +99,14 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.gson)
     implementation(libs.socket.io.client)
-    implementation(libs.androidx.camera.core)
+//    implementation(libs.androidx.camera.core)
     implementation(libs.androidx.camera.video)
-    implementation(libs.androidx.camera.lifecycle)
-    implementation(libs.androidx.camera.view)
+//    implementation(libs.androidx.camera.lifecycle)
+//    implementation(libs.androidx.camera.view)
+    implementation(libs.stream.video.android.ui.compose.v1014)
+    implementation (libs.androidx.camera.core.v131)
+    implementation (libs.androidx.camera.camera2)
+    implementation (libs.androidx.camera.view.v131)
+    implementation (libs.androidx.camera.lifecycle.v131)
 }
 

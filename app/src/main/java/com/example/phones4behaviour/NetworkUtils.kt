@@ -17,12 +17,13 @@ private val client = OkHttpClient.Builder()
     .addInterceptor(HttpLoggingInterceptor().apply { level = HttpLoggingInterceptor.Level.BODY })
     .build()
 
-fun postLog(description: String, timestamp: String) {
+fun postLog(tag: String, description: String, timestamp: String, deviceId: String) {
     val json = """
             {
-                "tag": "Touch Event",
+                "tag": "$tag",
                 "desc": "$description",
-                "time": "$timestamp"
+                "time": "$timestamp",
+                "device": "$deviceId"
             }
         """.trimIndent()
 
@@ -63,10 +64,39 @@ fun fetchFiles(serverIp: String, onResponse: (List<FileInfo>) -> Unit) {
                 response.body?.let { responseBody ->
                     val fileListType = object : TypeToken<List<FileInfo>>() {}.type
                     val files: List<FileInfo> = Gson().fromJson(responseBody.string(), fileListType)
+
                     onResponse(files)
+//                    Log.d("trying to display", "$files")
                 }
             } else {
                 Log.e("NetworkUtils", "Response not successful: ${response.code}")
+            }
+        }
+    })
+}
+
+fun postDevice(id: String, model: String) {
+    val deviceInfo = DeviceInfo(id, model)
+    val json = Gson().toJson(deviceInfo)
+
+//    Log.d("Device JSON", json)
+
+    val body = RequestBody.create("application/json; charset=utf-8".toMediaType(), json)
+    val request = Request.Builder()
+        .url("http://$serverIp:5000/devices")
+        .post(body)
+        .build()
+
+    client.newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+            Log.e("NetworkUtils", "Failed to post device: ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            if (response.isSuccessful) {
+                Log.d("NetworkUtils", "Device posted successfully")
+            } else {
+                Log.e("NetworkUtils", "Failed to post device, response code: ${response.code}")
             }
         }
     })
