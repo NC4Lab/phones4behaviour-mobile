@@ -50,15 +50,11 @@ data class DeviceInfo(
 )
 
 var serverIp = BuildConfig.SERVER_IP
-var streamLivestreamId = BuildConfig.STREAM_LIVESTREAM_ID
-var streamApiKey = BuildConfig.STREAM_API_KEY
-var streamViewerToken = BuildConfig.STREAM_VIEWER_TOKEN
 
 class MainActivity : ComponentActivity() {
     private var imageUrl by mutableStateOf("")
     private var audioUrl by mutableStateOf("")
 
-//    private lateinit var videoCapture: VideoCapture<Recorder>
     private lateinit var socket: Socket
     private lateinit var device: DeviceInfo
     private var targetDeviceId by mutableStateOf("")
@@ -76,26 +72,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val userId = "default_id"
-        val callId = "stream_call"
-        val userName = "default_username"
-        val userToken = StreamVideo.devToken(userId)
-
-        val user = User(
-            id = userId,
-            name = userName,
-            role = "admin",
-        )
-
-        val client = StreamVideoBuilder(
-            context = this,
-            apiKey = streamApiKey,
-//            user = user,
-//            token = streamViewerToken,
-            token = streamViewerToken,
-        ).build()
-
-        val call = client.call("livestream", streamLivestreamId)
         when (PackageManager.PERMISSION_GRANTED) {
             ContextCompat.checkSelfPermission(
                 this,
