@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="app">
         <option name="selectionMode" value="DIALOG" />
-        <DropdownSelection timestamp="2024-09-25T00:23:34.772516Z">
+        <DropdownSelection timestamp="2024-09-25T01:00:31.033797Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=RFCR601RM9K" />
+              <DeviceId pluginId="PhysicalDevice" identifier="serial=98271FFAZ00363" />
             </handle>
           </Target>
         </DropdownSelection>
@@ -15,12 +15,12 @@
           <targets>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=RFCR601RM9K" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=98271FFAZ00363" />
               </handle>
             </Target>
             <Target type="DEFAULT_BOOT">
               <handle>
-                <DeviceId pluginId="PhysicalDevice" identifier="serial=98271FFAZ00363" />
+                <DeviceId pluginId="PhysicalDevice" identifier="serial=RFCR601RM9K" />
               </handle>
             </Target>
           </targets>

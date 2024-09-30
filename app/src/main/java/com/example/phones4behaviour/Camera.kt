@@ -4,9 +4,12 @@ import android.content.ContentValues
 import android.content.Context
 import android.os.Build
 import android.provider.MediaStore
+import android.util.Base64
+import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
+import androidx.camera.core.ImageProxy
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
@@ -25,10 +28,11 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
+import android.provider.Settings
 
 @Composable
 fun CameraPreviewScreen() {
-    val lensFacing = CameraSelector.LENS_FACING_BACK
+    val lensFacing = CameraSelector.LENS_FACING_FRONT
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     val context = LocalContext.current
     val preview = Preview.Builder().build()
@@ -64,32 +68,24 @@ private suspend fun Context.getCameraProvider(): ProcessCameraProvider =
 
 
 private fun captureImage(imageCapture: ImageCapture, context: Context) {
-    val name = "CameraxImage.jpeg"
-    val contentValues = ContentValues().apply {
-        put(MediaStore.MediaColumns.DISPLAY_NAME, name)
-        put(MediaStore.MediaColumns.MIME_TYPE, "image/jpeg")
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.P) {
-            put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/CameraX-Image")
+    imageCapture.takePicture(ContextCompat.getMainExecutor(context), object : ImageCapture.OnImageCapturedCallback() {
+        override fun onCaptureSuccess(imageProxy: ImageProxy) {
+            val deviceId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+            val timestamp = System.currentTimeMillis().toString()
+
+            val buffer = imageProxy.planes[0].buffer
+            val bytes = ByteArray(buffer.remaining())
+            buffer.get(bytes)
+
+            val imageBase64 = Base64.encodeToString(bytes, Base64.DEFAULT)
+
+            postFrame(imageBase64, timestamp, deviceId)
+
+            imageProxy.close()
         }
-    }
-    val outputOptions = ImageCapture.OutputFileOptions
-        .Builder(
-            context.contentResolver,
-            MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-            contentValues
-        )
-        .build()
-    imageCapture.takePicture(
-        outputOptions,
-        ContextCompat.getMainExecutor(context),
-        object : ImageCapture.OnImageSavedCallback {
-            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                println("Successs")
-            }
 
-            override fun onError(exception: ImageCaptureException) {
-                println("Failed $exception")
-            }
-
-        })
+        override fun onError(exception: ImageCaptureException) {
+            Log.e("Camera", "Failed to capture image: ${exception.message}")
+        }
+    })
 }

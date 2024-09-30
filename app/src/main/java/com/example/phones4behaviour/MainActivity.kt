@@ -49,6 +49,20 @@ data class DeviceInfo(
     val model: String,
 )
 
+data class LogFile(
+    val tag: String,
+    val desc: String,
+    val time: String,
+    val device: String
+)
+
+data class FrameFile(
+    val image: String,
+    val time: String,
+    val device: String
+)
+
+
 var serverIp = BuildConfig.SERVER_IP
 
 class MainActivity : ComponentActivity() {
@@ -65,24 +79,24 @@ class MainActivity : ComponentActivity() {
             if (isGranted) {
                 setCameraPreview()
             } else {
-                // Camera permission denied
+                Log.d("Camera", "Camera permission denied")
             }
 
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        when (PackageManager.PERMISSION_GRANTED) {
-            ContextCompat.checkSelfPermission(
-                this,
-                android.Manifest.permission.CAMERA
-            ) -> {
-                setCameraPreview()
-            }
-            else -> {
-                cameraPermissionRequest.launch(android.Manifest.permission.CAMERA)
-            }
-        }
+//        when (PackageManager.PERMISSION_GRANTED) {
+//            ContextCompat.checkSelfPermission(
+//                this,
+//                android.Manifest.permission.CAMERA
+//            ) -> {
+//                setCameraPreview()
+//            }
+//            else -> {
+//                cameraPermissionRequest.launch(android.Manifest.permission.CAMERA)
+//            }
+//        }
         registerDevice()
 
         fetchFiles(serverIp) { files ->
@@ -116,51 +130,38 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-//        try {
-//            setContent {
-////                LaunchCallPermissions(call) {
-////                    val result = call.join(create = true)
-////                    result.onError {
-////                        Toast.makeText(applicationContext, it.message, Toast.LENGTH_LONG).show()
-////                    }
-////                }
-////                VideoTheme {
-////                    LiveStreamContent(call = call)
-////                }
-//                MaterialTheme {
-//                    Surface(
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                            .pointerInput(Unit) {
-//                                detectTapGestures(
-//                                    onPress = { offset ->
-//                                        val description =
-//                                            "Screen touched at x: ${offset.x}, y: ${offset.y}"
-//                                        val timestamp = getCurrentTimestamp()
-//                                        Log.d("TouchEvent", "$description at $timestamp")
-//                                        postLog(
-//                                            "Touch event",
-//                                            description,
-//                                            timestamp,
-//                                            currentDeviceId
-//                                        )
-//                                    }
-//                                )
-//                            }
-//                    ) {
-//                        currentDeviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
-//                        DisplayContent(imageUrl, audioUrl, targetDeviceId, currentDeviceId)
-////                        CameraPreview { previewView ->
-////                            startCamera(previewView)
-////                        }
-////                        CameraPreviewScreen()
-//                    }
-//                }
-//
-//            }
-//        } catch (e: Exception) {
-//            Log.e("MainActivity", "Error setting content: ${e.message}")
-//        }
+        try {
+            setContent {
+                MaterialTheme {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .pointerInput(Unit) {
+                                detectTapGestures(
+                                    onPress = { offset ->
+                                        val description =
+                                            "Screen touched at x: ${offset.x}, y: ${offset.y}"
+                                        val timestamp = getCurrentTimestamp()
+                                        Log.d("TouchEvent", "$description at $timestamp")
+                                        postLog(
+                                            "Touch event",
+                                            description,
+                                            timestamp,
+                                            currentDeviceId
+                                        )
+                                    }
+                                )
+                            }
+                    ) {
+                        currentDeviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+                        DisplayContent(imageUrl, audioUrl, targetDeviceId, currentDeviceId)
+                    }
+                }
+
+            }
+        } catch (e: Exception) {
+            Log.e("MainActivity", "Error setting content: ${e.message}")
+        }
     }
 
     private fun setCameraPreview() {
