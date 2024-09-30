@@ -43,9 +43,10 @@ fun postLog(tag: String, desc: String, timestamp: String, deviceId: String) {
     })
 }
 
-fun fetchFiles(serverIp: String, onResponse: (List<FileInfo>) -> Unit) {
+fun fetchFiles(serverIp: String, deviceId: String, onResponse: (List<FileInfo>) -> Unit) {
+
     val request = Request.Builder()
-        .url("http://$serverIp:5000/uploads/display")
+        .url("http://$serverIp:5000/uploads/display?deviceId=$deviceId")
         .build()
 
     client.newCall(request).enqueue(object : Callback {

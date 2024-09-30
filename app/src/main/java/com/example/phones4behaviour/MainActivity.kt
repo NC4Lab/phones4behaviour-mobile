@@ -86,6 +86,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        currentDeviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
 //        when (PackageManager.PERMISSION_GRANTED) {
 //            ContextCompat.checkSelfPermission(
 //                this,
@@ -99,7 +100,7 @@ class MainActivity : ComponentActivity() {
 //        }
         registerDevice()
 
-        fetchFiles(serverIp) { files ->
+        fetchFiles(serverIp,currentDeviceId) { files ->
             if (files.isNotEmpty()) {
                 for (file in files) {
                     if (file.file_type.startsWith("audio/")) {
@@ -114,7 +115,7 @@ class MainActivity : ComponentActivity() {
             }
         }
         socket = setupSocket(serverIp) {
-            fetchFiles(serverIp) { files ->
+            fetchFiles(serverIp,currentDeviceId) { files ->
                 if (files.isNotEmpty()) {
                     for (file in files) {
                         if (file.file_type.startsWith("audio/")) {
@@ -153,7 +154,6 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                     ) {
-                        currentDeviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
                         DisplayContent(imageUrl, audioUrl, targetDeviceId, currentDeviceId)
                     }
                 }
